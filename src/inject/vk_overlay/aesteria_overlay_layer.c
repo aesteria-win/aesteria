@@ -9,9 +9,9 @@
  *
  * WHY THIS IS THE LOW-EXPOSURE FORM OF "INJECTION"
  *   The layer is a LINUX .so, loaded by the LINUX Vulkan loader, below the wine boundary.
- *   NCGuard (bb64.dll) is user-mode and enumerates the WINDOWS PEB module list; this object
- *   never appears there, for the same reason /proc/<pid>/mem reads do not. That is an
- *   argument about mechanism, NOT a measurement — the measurement is the game reaching
+ *   It never appears in the Windows process's own module list, for the same reason
+ *   /proc/<pid>/mem reads do not. That is an argument about mechanism, NOT a measurement —
+ *   the measurement is the game reaching
  *   in-world with the layer loaded, which is what this increment exists to establish.
  *
  * PROVENANCE: built on a Vulkan overlay layer that ran for months in other games. Everything

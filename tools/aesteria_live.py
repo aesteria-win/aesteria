@@ -7,8 +7,8 @@ was the point of putting a real interface on the snapshot reader instead of
 passing raw bytes around.
 
 STILL READ-ONLY, STILL NO INJECTION. We open /proc/<pid>/mem O_RDONLY and pread.
-No ptrace attach, no writes, no stopping the process. NCGuard enumerates the
-Windows PEB module list and cannot see this.
+No ptrace attach, no writes, no stopping the process, and nothing added to the
+process itself.
 
 USAGE
     aesteria_live.py state   --meta-from captures/01-tutorial-in-world

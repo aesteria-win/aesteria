@@ -2,9 +2,9 @@
  *
  * THE QUESTION THIS ANSWERS, AND THE ONE IT DELIBERATELY DOES NOT
  *   Everything AESTERIA can do today is done from OUTSIDE the process, via /proc/<pid>/mem,
- *   which NCGuard cannot observe. Getting INSIDE buys exactly two things we cannot otherwise
- *   have: a thread of our own in the game's address space, and (later) the ability to call
- *   into the game. This probe establishes the first and nothing else.
+ *   which adds nothing to the process itself. Getting INSIDE buys exactly two things we cannot
+ *   otherwise have: a thread of our own in the game's address space, and (later) the ability to
+ *   call into the game. This probe establishes the first and nothing else.
  *
  *   It performs NO function interposition. It hooks nothing, patches nothing, writes to no
  *   game memory, and reads nothing but /proc/self. That is the point: if the client fails to
@@ -14,21 +14,20 @@
  *   only thing that changed is the thing you are testing.)
  *
  * WHY THIS IS THE LOW-EXPOSURE FORM OF INJECTION
- *   LD_PRELOAD loads a LINUX ELF into the wine process. NCGuard (bb64.dll) is user-mode and
- *   walks the WINDOWS PEB module list, where this object does not appear — the same boundary
- *   that makes /proc/<pid>/mem invisible. That is an argument from mechanism; the
+ *   LD_PRELOAD loads a LINUX ELF into the wine process, on the Linux side of the boundary only.
+ *   Nothing is added to the Windows process's own module list — the same property that makes
+ *   /proc/<pid>/mem reads leave no trace in it. That is an argument from mechanism; the
  *   MEASUREMENT is the client reaching in-world with this loaded, which is the whole test.
  *
  * WHAT TO READ AFTERWARDS
  *   /tmp/aesteria-probe.log. The timestamps are the instrument. A log that simply continues
  *   past character-select means the mechanism is tolerated. A log that STOPS at a repeatable
- *   offset after load is an anti-cheat rejection with a clock on it — that is exactly how
- *   an XignCode rejection of another title showed up at ~11 s — and the offset tells you which
- *   stage of NCGuard's init did it.
+ *   offset after load is a rejection with a clock on it, and the offset says which stage of
+ *   client startup refused it.
  *
  * STAGES — escalate ONE per launch, so each result is attributable:
  *   (default)                 identify the process, one line, then nothing.
- *   AESTERIA_PROBE_MAPS=1     snapshot /proc/self/maps once, late enough to see bb64.dll.
+ *   AESTERIA_PROBE_MAPS=1     snapshot /proc/self/maps once, and summarise what is in it.
  *   AESTERIA_PROBE_THREAD=1   keep a heartbeat thread for the session. THE real question:
  *                             can we host a runtime in here at all?
  *
@@ -97,9 +96,9 @@ static void self_argv0(char *out, size_t cap){
     out[n_base] = '\0';
 }
 
-/* Copy our own maps out, and summarise what matters: is NCGuard in here with us, and how
- * much anonymous executable memory is there (AION2.exe is packed, so its real code lives in
- * anonymous regions — this is the INSIDE view of what the offline captures see). */
+/* Copy our own maps out, and summarise what matters: how much anonymous executable memory
+ * is there (AION2.exe is packed, so its real code lives in anonymous regions — this is the
+ * INSIDE view of what the offline captures see). */
 static void snapshot_maps(const char *why){
     FILE *in = fopen("/proc/self/maps","rb");
     if(!in){ plog("maps: cannot open (%s)", strerror(errno)); return; }
@@ -107,11 +106,10 @@ static void snapshot_maps(const char *why){
     snprintf(path,sizeof path,"%s.%d",PROBE_MAPS,(int)getpid());
     FILE *out = fopen(path,"wb");
     char line[4096];
-    unsigned long anon_exec=0, total=0; int saw_bb64=0, saw_self=0;
+    unsigned long anon_exec=0, total=0; int saw_self=0;
     while(fgets(line,sizeof line,in)){
         if(out) fputs(line,out);
         total++;
-        if(strstr(line,"bb64.dll")) saw_bb64=1;
         if(strstr(line,"libaesteria_probe.so")) saw_self=1;
         /* "executable, and no backing file" -> unpacked code. Count FIELDS rather than
          * sniffing for a trailing space: a maps line is
@@ -130,8 +128,8 @@ static void snapshot_maps(const char *why){
     }
     fclose(in);
     if(out) fclose(out);
-    plog("maps[%s]: %lu regions, %lu anonymous-executable, bb64.dll=%s, self-mapped=%s -> %s",
-         why, total, anon_exec, saw_bb64?"PRESENT":"absent", saw_self?"yes":"NO", path);
+    plog("maps[%s]: %lu regions, %lu anonymous-executable, self-mapped=%s -> %s",
+         why, total, anon_exec, saw_self?"yes":"NO", path);
 }
 
 static void *heartbeat(void *arg){
@@ -161,7 +159,7 @@ static void *heartbeat(void *arg){
         if(getenv("AESTERIA_PROBE_MAPS")) snapshot_maps("at-identification");
     }
 
-    /* PHASE 2 — the interesting window is the first minute: NCGuard initialises, then the
+    /* PHASE 2 — the interesting window is the first minute: client startup runs, then the
      * client reaches title/character-select/world. Log densely there, sparsely after. */
     int maps_done = 0;
     double t_id = elapsed();

@@ -8,11 +8,9 @@ WHY NOT CHEAT ENGINE
     the human out of the comparison, not to read the number faster.
 
     But CE is the wrong instrument HERE specifically. CE attaches as a WINDOWS DEBUGGER, and
-    a debugger check is the single most universal thing a user-mode anti-cheat does --
-    PEB.BeingDebugged, NtQueryInformationProcess(ProcessDebugPort), tool window names. Every
-    mechanism AESTERIA has proven live works because it sits BELOW the wine boundary where
-    NCGuard cannot look; CE sits above it, in exactly the place NCGuard does look. There is no
-    throwaway account for AION 2.
+    an attached debugger is the most conspicuous thing a client can notice about its own
+    process. Every mechanism AESTERIA has proven live works because it sits BELOW the wine
+    boundary and attaches nothing; CE sits above it. There is no throwaway account for AION 2.
 
     None of that is needed, because CE's actual method does not require a debugger. The
     method is: snapshot memory, let the value change, keep only the slots that changed the

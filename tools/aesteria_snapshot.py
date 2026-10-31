@@ -10,9 +10,9 @@ WHY THIS EXISTS
 
 WHY THIS IS SAFE
     We never attach, never write, never stop the process. We open /proc/<pid>/mem
-    read-only and pread() from it. That is a Linux kernel interface; NCGuard
-    (bb64.dll) enumerates the Windows PEB module list and has no way to observe
-    it. Requires kernel.yama.ptrace_scope=0 (the host: already 0) or CAP_SYS_PTRACE.
+    read-only and pread() from it. That is a Linux kernel interface, and it adds
+    nothing to the process being read. Requires kernel.yama.ptrace_scope=0 (the
+    host: already 0) or CAP_SYS_PTRACE.
 
 USAGE
     aesteria_snapshot.py maps                 # instant, zero-risk: classify regions
@@ -93,8 +93,8 @@ def find_pid(explicit: int | None = None) -> int:
             hits.append((int(entry.name), cmdline.strip()))
     if not hits:
         sys.exit(f"no process matching {GAME_EXE!r} found -- is the game in-world?")
-    # NCGuard spawns a second 'admin' helper; the game itself is the one with the
-    # biggest resident set, so prefer that over guessing on pid order.
+    # The launcher spawns a second helper process; the game itself is the one with
+    # the biggest resident set, so prefer that over guessing on pid order.
     def rss_of(pid: int) -> int:
         try:
             for line in Path(f"/proc/{pid}/status").read_text().splitlines():
